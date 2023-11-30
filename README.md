@@ -3,10 +3,6 @@ This repository currently contains the code for my master thesis.
 
 ## Folders
 
-### training_resources
-This folder contains:
-- The training data for the neural network model
-
 ### scripts  
 In this folder test scripts that execute the code from our trpseg package can be placed.
 This folder currently contains a script to segment the ventricle and a script to compute evaluation metrics for segmentation results
