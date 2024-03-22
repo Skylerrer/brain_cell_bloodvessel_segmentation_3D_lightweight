@@ -315,7 +315,7 @@ class ParsSegPage(QWidget):
         brain_channel_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         b_ch_label = QLabel("Choose channel to use for brain tissue detection:")
         self.b_ch_cbox = QComboBox()
-        self.b_ch_cbox.addItems(["Channel 00", "Channel 01"])
+        self.b_ch_cbox.addItems(["Blood Channel", "Pars Channel"])
 
         self.b_ch_cbox.setCurrentIndex(0)
         self.b_ch_cbox.setEnabled(False)
