@@ -340,6 +340,60 @@ def get_file_list_from_directory(directory, isTif=None, channel_one=None):
     return input_files_list
 
 
+def get_file_list_from_directory_filter(directory, file_ending=None, channel_filter=None):
+    """Get filepaths of files from within the given directory. File paths are sorted lexicographically.
+
+        Files inside of folders inside the given directory are not considered.
+        A file ending and a channel_filter can be specified.
+
+        Parameters
+        ----------
+        directory : str, pathlib.Path
+            The path to the folder from which filepaths are extracted.
+        file_ending : str, optional
+            Determines, which input images inside input_folder_path are considered.
+            Only files with the given file ending are considered.
+            If None, all file endings are considered.
+        channel_filter : str, optional
+            Only files that contain that string are considered.
+            This allows to for example to filter for certain channels (e.g. "C00" or "C01")
+            None, means that all files are considered.
+
+        Returns
+        -------
+        input_files_list : list of str, list of pathlib.Path
+            Sorted list of file paths (sorted lexicographically)
+        """
+
+    input_folder = Path(directory)
+
+    #make sure file_ending starts with a dot
+    if file_ending is not None and len(file_ending) > 0:
+        if file_ending[0] != ".":
+            file_ending = "." + file_ending
+
+    if file_ending is not None and channel_filter is not None:  #file_ending is not None / channel_filter is not None
+        filter_str = "*" + channel_filter + "*" + file_ending
+        input_list = input_folder.glob(filter_str)
+        input_list = [file_path for file_path in input_list]
+    elif file_ending is not None:                               #file_ending is not None / channel_filter is None
+        filter_str = "*" + file_ending
+        input_list = input_folder.glob(filter_str)
+        input_list = [file_path for file_path in input_list]
+    elif channel_filter is not None:                            #file_ending is None / channel_filter is not None
+        filter_str = "*" + channel_filter + "*"
+        input_list = input_folder.glob(filter_str)
+        input_list = [file_path for file_path in input_list if not file_path.is_dir()]
+    else:                                                       #file_ending is None / channel_filte is None
+        input_list = input_folder.glob("*")
+        input_list = [file_path for file_path in input_list if not file_path.is_dir()]
+
+
+    input_files_list = sorted(input_list)
+
+    return input_files_list
+
+
 def png_to_tif(input_folder_path, output_folder_path, dtype, channel_one=None):
     """ Write png files from input_folder_path to tif files in output_folder_path under given datatype
 
