@@ -36,7 +36,8 @@ from trpseg import DATA_DIRECTORY
 from trpseg.trpseg_util.utility import get_file_list_from_directory, read_image, count_segmentation_pixels
 from trpseg.segmentation.blood_vessel_NN_seg import network_predict_and_postprocess, get_default_NN_model_path
 from trpseg.trpseg_util.graph_generation import perform_graph_generation
-from trpseg.GUI.gui_utility import InputOutputWidget, show_error_message
+from trpseg.GUI.gui_utility import InputOutputWidgetSingleInput, show_error_message
+from trpseg.GUI.file_picker import FilePicker
 
 maximalNeededSizePolicy = QSizePolicy()
 maximalNeededSizePolicy.setHorizontalPolicy(QSizePolicy.Policy.Maximum)
@@ -71,7 +72,7 @@ class FilledVesselPage(QWidget):
         self.setLayout(pageLayout)
 
         # 1. Choose Input/Output Directory------------------------------------------------------------------------------
-        self.in_out_widget = InputOutputWidget()
+        self.in_out_widget = InputOutputWidgetSingleInput()
         self.in_out_widget.input_dir_button.clicked.connect(self.chooseInputDir)
         self.in_out_widget.output_dir_button.clicked.connect(self.chooseOutputDir)
 
@@ -232,26 +233,18 @@ class FilledVesselPage(QWidget):
 
 
     def chooseInputDir(self):
-        home = os.path.expanduser("~")
-        directory = QFileDialog.getExistingDirectory(self, "Select Input Directory", home)
-        if directory != '':
-            self.input_folder_path = directory
-            self.in_out_widget.input_dir_line.setText(directory)
+        file_picker = FilePicker()
 
-            self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
-            if len(self.input_file_list_c00) == 0:
-                self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=False)
+        if file_picker.exec():
+            if file_picker.input_folder_path != '':
+                self.input_folder_path = file_picker.input_folder_path
+                self.in_out_widget.input_dir_line.setText(self.input_folder_path)
+                self.input_file_list_c00 = file_picker.input_file_paths
+                self.numFilesC00 = len(self.input_file_list_c00)
+                self.in_out_widget.numFiles_label.setText(f"Number of Images: {self.numFilesC00}")
+        file_picker.deleteLater()
 
-            self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
-            if len(self.input_file_list_c01) == 0:
-                self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=True)
-
-            self.numFilesC00 = len(self.input_file_list_c00)
-            self.numFilesC01 = len(self.input_file_list_c01)
-            self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-            self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
-
-            self.checkEnableElements()
+        self.checkEnableElements()
 
     def chooseOutputDir(self):
         home = os.path.expanduser("~")
@@ -286,13 +279,10 @@ class FilledVesselPage(QWidget):
         if self.new_input_folder_for_graph != "":
             self.input_folder_path = self.new_input_folder_for_graph
             self.in_out_widget.input_dir_line.setText(self.input_folder_path)
-            self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=False)
-            self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=True)
+            self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=None, channel_one=None)
 
             self.numFilesC00 = len(self.input_file_list_c00)
-            self.numFilesC01 = len(self.input_file_list_c01)
-            self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-            self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
+            self.in_out_widget.numFiles_label.setText(f"Number of Images: {self.numFilesC00}")
 
     def post_remSmall_change(self, state):
         if state == 0:
@@ -411,7 +401,7 @@ class NetworkProgressDialog(QDialog):
         # Thread to perform filled vessel segmentation
         self.segmentation_thread = QThread()
 
-        self.worker = NetworkWorker(parent.input_folder_path, parent.output_folder_path, parent.resolution, parent.model_path,
+        self.worker = NetworkWorker(parent.input_file_list_c00, parent.output_folder_path, parent.resolution, parent.model_path,
                                    parent.do_post_remSmall, parent.do_post_fillHoles, parent.do_post_opening)
 
         #print('Main thread ID: %s' % int(QThread.currentThreadId()))
@@ -456,13 +446,13 @@ class NetworkWorker(QObject):
     output_ready = pyqtSignal(str)
     finished = pyqtSignal()
 
-    def __init__(self, input_folder_path, output_folder_path, resolution, model_path, remove_small_objects, fill_holes, do_opening):
+    def __init__(self, input_file_paths, output_folder_path, resolution, model_path, remove_small_objects, fill_holes, do_opening):
 
         super().__init__()
 
         self.canceled = Event()
 
-        self.input_folder_path = input_folder_path
+        self.input_file_paths = input_file_paths
         self.output_folder_path = output_folder_path
 
         self.resolution = resolution
@@ -473,7 +463,7 @@ class NetworkWorker(QObject):
 
     def startSegmentation(self):
         #print('Thread ID: %s' % int(QThread.currentThreadId()))
-        result_folder_path = network_predict_and_postprocess(self.input_folder_path, self.output_folder_path, self.model_path, self.resolution,
+        result_folder_path = network_predict_and_postprocess(self.input_file_paths, self.output_folder_path, self.model_path, self.resolution,
                                                              self.remove_small_objects, self.fill_holes, self.do_opening,
                                                              canceled=self.canceled, progress_status=self.progress_status)
 
@@ -582,7 +572,7 @@ class QuantifyVolumeWorker(QObject):
         #print('Thread ID: %s' % int(QThread.currentThreadId()))
         # compute total volume by summing up pixels physical sizes
         # and write to txt
-        total_num_pixels = count_segmentation_pixels(self.input_folder_path, isTif=None, channel_one=False, canceled=self.canceled, progress_status=self.progress_status)
+        total_num_pixels = count_segmentation_pixels(self.input_folder_path, isTif=None, channel_one=None, canceled=self.canceled, progress_status=self.progress_status)
         total_volume = total_num_pixels * self.resolution[0] * self.resolution[1] * self.resolution[2]
 
         time_str = time.strftime("%H%M%S_")

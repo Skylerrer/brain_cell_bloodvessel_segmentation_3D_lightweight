@@ -36,10 +36,11 @@ from PyQt6.QtWidgets import (
 from trpseg import DATA_DIRECTORY
 from trpseg.trpseg_util.utility import get_file_list_from_directory, count_segmentation_pixels
 from trpseg.GUI.parameter_picker import ThresholdPicker
+from trpseg.GUI.file_picker import FilePicker
 from trpseg.trpseg_util.z_normalization import z_stack_tissue_mean_normalization
 from trpseg.segmentation.blood_vessel_wall_seg import blood_vessel_wall_segmentation, get_default_min_signal_intensity,\
     get_default_high_confidence_threshold, get_default_local_th_offset, get_default_rball_th, get_default_border_rf_model_path
-from trpseg.GUI.gui_utility import InputOutputWidget, NormalizationWidget, show_error_message
+from trpseg.GUI.gui_utility import InputOutputWidgetSingleInput, NormalizationWidget, show_error_message
 
 
 maximalNeededSizePolicy = QSizePolicy()
@@ -68,7 +69,7 @@ class VesselWallPage(QWidget):
         self.setLayout(pageLayout)
 
         # 1. Choose Input Directory-------------------------------------------------------------------------------------
-        self.in_out_widget = InputOutputWidget()
+        self.in_out_widget = InputOutputWidgetSingleInput()
         self.in_out_widget.input_dir_button.clicked.connect(self.chooseInputDir)
         self.in_out_widget.output_dir_button.clicked.connect(self.chooseOutputDir)
 
@@ -426,35 +427,24 @@ class VesselWallPage(QWidget):
     def set_input_dir_to_normalized(self):
         self.input_folder_path = self.normalize_folder_out
         self.in_out_widget.input_dir_line.setText(self.normalize_folder_out)
-        self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
-        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
+        self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=None, channel_one=None)
 
         self.numFilesC00 = len(self.input_file_list_c00)
-        self.numFilesC01 = len(self.input_file_list_c01)
-        self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-        self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
+        self.in_out_widget.numFiles_label.setText(f"Number of Images: {self.numFilesC00}")
 
     def chooseInputDir(self):
-        home = os.path.expanduser("~")
-        directory = QFileDialog.getExistingDirectory(self, "Select Input Directory", home)
-        if directory != '':
-            self.input_folder_path = directory
-            self.in_out_widget.input_dir_line.setText(directory)
+        file_picker = FilePicker()
 
-            self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
-            if len(self.input_file_list_c00) == 0:
-                self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=False)
+        if file_picker.exec():
+            if file_picker.input_folder_path != '':
+                self.input_folder_path = file_picker.input_folder_path
+                self.in_out_widget.input_dir_line.setText(self.input_folder_path)
+                self.input_file_list_c00 = file_picker.input_file_paths
+                self.numFilesC00 = len(self.input_file_list_c00)
+                self.in_out_widget.numFiles_label.setText(f"Number of Images: {self.numFilesC00}")
+        file_picker.deleteLater()
 
-            self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
-            if len(self.input_file_list_c01) == 0:
-                self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=True)
-
-            self.numFilesC00 = len(self.input_file_list_c00)
-            self.numFilesC01 = len(self.input_file_list_c01)
-            self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-            self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
-
-            self.checkEnableElements()
+        self.checkEnableElements()
 
     def chooseOutputDir(self):
         home = os.path.expanduser("~")
@@ -539,7 +529,7 @@ class NormalizationProgressDialog(QDialog):
         # A thread to perform tissue mean normalization
         self.normalization_thread = QThread()
 
-        self.worker = NormalizationWorker(parent.input_folder_path, parent.normalize_folder_out, parent.normalization_widget.tissue_min, parent.normalization_widget.tissue_max)
+        self.worker = NormalizationWorker(parent.input_file_list_c00, parent.normalize_folder_out, parent.normalization_widget.tissue_min, parent.normalization_widget.tissue_max)
 
         #print('Main thread ID: %s' % int(QThread.currentThreadId()))
         self.worker.moveToThread(self.normalization_thread)
@@ -581,13 +571,13 @@ class NormalizationWorker(QObject):
 
     finished = pyqtSignal()
 
-    def __init__(self, input_folder_path, output_folder_path, tissue_min, tissue_max):
+    def __init__(self, input_files_list, output_folder_path, tissue_min, tissue_max):
 
         super().__init__()
 
         self.canceled = Event()
 
-        self.input_folder_path = input_folder_path
+        self.input_files_list = input_files_list
         self.output_folder_path = output_folder_path
 
         self.tissue_min = tissue_min
@@ -596,8 +586,8 @@ class NormalizationWorker(QObject):
 
     def startNormalization(self):
         #print('Thread ID: %s' % int(QThread.currentThreadId()))
-        z_stack_tissue_mean_normalization(self.input_folder_path, self.output_folder_path, self.tissue_min, self.tissue_max,
-                                          channel_one=False, canceled=self.canceled, progress_status=self.progress_status)
+        z_stack_tissue_mean_normalization(self.input_files_list, self.output_folder_path, self.tissue_min, self.tissue_max,
+                                          canceled=self.canceled, progress_status=self.progress_status)
 
         if not self.canceled.is_set():
             progress = 100
@@ -644,7 +634,7 @@ class VesSegProgressDialog(QDialog):
         # Thread to perform vessel wall segmentation
         self.segmentation_thread = QThread()
 
-        self.worker = VesSegWorker(parent.input_folder_path, parent.output_folder_path, parent.resolution, parent.min_signal_intensity,
+        self.worker = VesSegWorker(parent.input_file_list_c00, parent.output_folder_path, parent.resolution, parent.min_signal_intensity,
                                    parent.high_conf_threshold, parent.local_th_offset, parent.rball_th, parent.store_intermediate_results, parent.remove_border,
                                    parent.border_model_path, parent.remove_small_objects)
 
@@ -688,14 +678,14 @@ class VesSegWorker(QObject):
 
     finished = pyqtSignal()
 
-    def __init__(self, input_folder_path, output_folder_path, resolution, min_signal_intensity, high_confidence_threshold,
+    def __init__(self, input_file_paths, output_folder_path, resolution, min_signal_intensity, high_confidence_threshold,
                  local_th_offset, rball_th, store_intermed_results, remove_border, border_rf_model_path, remove_small_objects):
 
         super().__init__()
 
         self.canceled = Event()
 
-        self.input_folder_path = input_folder_path
+        self.input_file_paths = input_file_paths
         self.output_folder_path = output_folder_path
 
         self.resolution = resolution
@@ -710,7 +700,7 @@ class VesSegWorker(QObject):
 
     def startSegmentation(self):
         #print('Thread ID: %s' % int(QThread.currentThreadId()))
-        blood_vessel_wall_segmentation(self.input_folder_path, self.output_folder_path, self.resolution,
+        blood_vessel_wall_segmentation(self.input_file_paths, self.output_folder_path, self.resolution,
                                        self.min_signal_intensity, self.high_confidence_threshold,
                                        self.local_th_offset, self.rball_th,
                                        store_intermed_results=self.store_intermed_results,
@@ -822,7 +812,7 @@ class QuantifyVolumeWorker(QObject):
         #print('Thread ID: %s' % int(QThread.currentThreadId()))
         # compute total volume by summing up pixels physical sizes
         # and write to txt
-        total_num_pixels = count_segmentation_pixels(self.input_folder_path, isTif=None, channel_one=False, canceled=self.canceled, progress_status=self.progress_status)
+        total_num_pixels = count_segmentation_pixels(self.input_folder_path, isTif=None, channel_one=None, canceled=self.canceled, progress_status=self.progress_status)
         total_volume = total_num_pixels * self.resolution[0] * self.resolution[1] * self.resolution[2]
 
         time_str = time.strftime("%H%M%S_")

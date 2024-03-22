@@ -36,12 +36,13 @@ from PyQt6.QtWidgets import (
 from trpseg.trpseg_util.utility import get_file_list_from_directory, write_counting_stats_to_txt,\
     count_labels_3D_memeff, read_image
 from trpseg.GUI.parameter_picker import ThresholdPickerGaussianSmoothed, ThresholdPicker
+from trpseg.GUI.file_picker import FilePicker
 from trpseg.segmentation.pars_tuberalis_cells_seg import segment_pars_tuberalis_cells, get_default_min_pars_cell_size,\
      get_remove_smaller_z_length_from_resolution, get_closing_radius_from_resolution, get_median_radius_from_resolution,\
      watershed_split_memeff, get_default_avg_pars_cell_size, get_default_final_pseg_output_name, get_default_brain_tissue_sigma,\
      estimateParsCellCounts
 from trpseg.trpseg_util.z_normalization import z_stack_tissue_mean_normalization
-from trpseg.GUI.gui_utility import InputOutputWidget, NormalizationWidget, show_error_message
+from trpseg.GUI.gui_utility import InputOutputWidgetTwoInputs, InputOutputWidgetSingleInput, NormalizationWidget, show_error_message
 
 
 maximalNeededSizePolicy = QSizePolicy()
@@ -57,7 +58,8 @@ class ParsSegPage(QWidget):
         self.parent_main_window = parent_main_window
 
         self.resolution = np.zeros(shape=(3,), dtype=np.float32)
-        self.input_folder_path = ""
+        self.input_folder_path_blood = ""
+        self.input_folder_path_pars = ""
         self.input_file_list_c00 = []
         self.input_file_list_c01 = []
         self.numFilesC00 = 0
@@ -87,9 +89,10 @@ class ParsSegPage(QWidget):
         segmentationTabs.addTab(parseg_page_widget, 'Cells Analysis')
 
         # 1. Choose Input/Output Directory------------------------------------------------------------------------------
-        self.in_out_widget = InputOutputWidget()
+        self.in_out_widget = InputOutputWidgetTwoInputs()
         self.in_out_widget.setContentsMargins(0,0,0,20)
-        self.in_out_widget.input_dir_button.clicked.connect(self.chooseInputDir)
+        self.in_out_widget.input_dir_button_blood.clicked.connect(self.chooseInputDirBlood)
+        self.in_out_widget.input_dir_button_pars.clicked.connect(self.chooseInputDirPars)
         self.in_out_widget.output_dir_button.clicked.connect(self.chooseOutputDir)
 
         parseg_page_layout.addWidget(self.in_out_widget, Qt.AlignmentFlag.AlignTop)
@@ -510,15 +513,12 @@ class ParsSegPage(QWidget):
         dlg.deleteLater()
 
     def set_input_dir_to_result_folder(self):
-        self.input_folder_path = self.final_pseg_folder_out
-        self.in_out_widget.input_dir_line.setText(str(self.final_pseg_folder_out))
-        self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=False)
-        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=True)
+        self.input_folder_path_pars = self.final_pseg_folder_out
+        self.in_out_widget.input_dir_line_pars.setText(str(self.final_pseg_folder_out))
+        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path_pars, isTif=None, channel_one=None)
 
-        self.numFilesC00 = len(self.input_file_list_c00)
         self.numFilesC01 = len(self.input_file_list_c01)
-        self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-        self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
+        self.in_out_widget.numFilesBlood_label.setText(f"Number of Images (Pars): {self.numFilesC01}")
 
     def initialize_advanced_parameters(self):
         self.brain_tissue_sigma = get_default_brain_tissue_sigma()
@@ -596,15 +596,12 @@ class ParsSegPage(QWidget):
         norm_dlg.deleteLater()
 
     def set_input_dir_to_normalized(self):
-        self.input_folder_path = self.normalize_folder_out
-        self.in_out_widget.input_dir_line.setText(self.normalize_folder_out)
-        self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
-        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
+        self.input_folder_path_pars = self.normalize_folder_out
+        self.in_out_widget.input_dir_line_pars.setText(self.normalize_folder_out)
+        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path_pars, isTif=None, channel_one=None)
 
-        self.numFilesC00 = len(self.input_file_list_c00)
         self.numFilesC01 = len(self.input_file_list_c01)
-        self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-        self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
+        self.in_out_widget.numFilesPars_label.setText(f"Number of Images (Pars): {self.numFilesC01}")
 
     def store_intermed_change(self, state):
         if state == 0:
@@ -693,27 +690,33 @@ class ParsSegPage(QWidget):
     def set_average_cell_size(self, value):
         self.avg_cell_size = value
 
-    def chooseInputDir(self):
-        home = os.path.expanduser("~")
-        directory = QFileDialog.getExistingDirectory(self, "Select Input Directory", home)
-        if directory != '':
-            self.input_folder_path = directory
-            self.in_out_widget.input_dir_line.setText(directory)
+    def chooseInputDirBlood(self):
+        file_picker = FilePicker()
 
-            self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
-            if len(self.input_file_list_c00) == 0:
-                self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=False)
+        if file_picker.exec():
+            if file_picker.input_folder_path != '':
+                self.input_folder_path_blood = file_picker.input_folder_path
+                self.in_out_widget.input_dir_line_blood.setText(self.input_folder_path_blood)
+                self.input_file_list_c00 = file_picker.input_file_paths
+                self.numFilesC00 = len(self.input_file_list_c00)
+                self.in_out_widget.numFilesBlood_label.setText(f"Number of Images (Blood): {self.numFilesC00}")
+        file_picker.deleteLater()
 
-            self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
-            if len(self.input_file_list_c01) == 0:
-                self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=True)
+        self.checkEnableElements()
 
-            self.numFilesC00 = len(self.input_file_list_c00)
-            self.numFilesC01 = len(self.input_file_list_c01)
-            self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-            self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
+    def chooseInputDirPars(self):
+        file_picker = FilePicker()
 
-            self.checkEnableElements()
+        if file_picker.exec():
+            if file_picker.input_folder_path != '':
+                self.input_folder_path_pars = file_picker.input_folder_path
+                self.in_out_widget.input_dir_line_pars.setText(self.input_folder_path_pars)
+                self.input_file_list_c01 = file_picker.input_file_paths
+                self.numFilesC01 = len(self.input_file_list_c01)
+                self.in_out_widget.numFilesPars_label.setText(f"Number of Images (Pars): {self.numFilesC01}")
+        file_picker.deleteLater()
+
+        self.checkEnableElements()
 
     def chooseOutputDir(self):
         home = os.path.expanduser("~")
@@ -772,7 +775,7 @@ class NormalizationProgressDialog(QDialog):
         # Thread to perform tissue mean normalization
         self.normalization_thread = QThread()
 
-        self.worker = NormalizationWorker(parent.input_folder_path, parent.normalize_folder_out, parent.normalization_widget.tissue_min, parent.normalization_widget.tissue_max)
+        self.worker = NormalizationWorker(parent.input_file_list_c01, parent.normalize_folder_out, parent.normalization_widget.tissue_min, parent.normalization_widget.tissue_max)
 
         #print('Main thread ID: %s' % int(QThread.currentThreadId()))
         self.worker.moveToThread(self.normalization_thread)
@@ -814,13 +817,13 @@ class NormalizationWorker(QObject):
 
     finished = pyqtSignal()
 
-    def __init__(self, input_folder_path, output_folder_path, tissue_min, tissue_max):
+    def __init__(self, input_files_list, output_folder_path, tissue_min, tissue_max):
 
         super().__init__()
 
         self.canceled = Event()
 
-        self.input_folder_path = input_folder_path
+        self.input_files_list = input_files_list
         self.output_folder_path = output_folder_path
 
         self.tissue_min = tissue_min
@@ -829,8 +832,8 @@ class NormalizationWorker(QObject):
 
     def startNormalization(self):
         #print('Thread ID: %s' % int(QThread.currentThreadId()))
-        z_stack_tissue_mean_normalization(self.input_folder_path, self.output_folder_path, self.tissue_min, self.tissue_max,
-                                          channel_one=True, canceled=self.canceled, progress_status=self.progress_status)
+        z_stack_tissue_mean_normalization(self.input_files_list, self.output_folder_path, self.tissue_min, self.tissue_max,
+                                          canceled=self.canceled, progress_status=self.progress_status)
 
         if not self.canceled.is_set():
             progress = 100
@@ -877,7 +880,7 @@ class ParsProgressDialog(QDialog):
         # Thread to perform pars tuberalis cells segmentation
         self.seg_thread = QThread()
 
-        self.worker = ParSegWorker(parent.input_folder_path, parent.output_folder_path, parent.resolution,
+        self.worker = ParSegWorker(parent.input_file_list_c01, parent.input_file_list_c00, parent.output_folder_path, parent.resolution,
                                    parent.pars_threshold, parent.remove_by_distance, parent.remove_smaller_than,
                                    parent.remove_smaller_z_width, parent.max_dist,
                                    parent.brain_tissue_sigma, parent.brain_tissue_threshold, parent.brain_tissue_channel_one,
@@ -923,7 +926,7 @@ class ParSegWorker(QObject):
 
     finished = pyqtSignal()
 
-    def __init__(self, input_folder_path, output_folder_path, resolution, pars_threshold,
+    def __init__(self, input_file_paths_pars, input_file_paths_blood, output_folder_path, resolution, pars_threshold,
                  remove_by_distance, remove_smaller_than, remove_smaller_z_width, max_dist, brain_tissue_sigma,
                  brain_tissue_threshold, brain_channel_one, pars_median_radius, closing_radius,
                  store_intermediate, prepend_to_folder_name):
@@ -932,7 +935,8 @@ class ParSegWorker(QObject):
 
         self.canceled = Event()
 
-        self.input_folder_path = input_folder_path
+        self.input_file_paths_pars = input_file_paths_pars
+        self.input_file_paths_blood = input_file_paths_blood
         self.output_folder_path = output_folder_path
         self.resolution = resolution
         self.pars_threshold = pars_threshold
@@ -952,7 +956,7 @@ class ParSegWorker(QObject):
         self.prepend_to_folder_name = prepend_to_folder_name
 
     def startSegmentation(self):
-        segment_pars_tuberalis_cells(self.input_folder_path, self.output_folder_path, self.resolution,
+        segment_pars_tuberalis_cells(self.input_file_paths_pars, self.input_file_paths_blood, self.output_folder_path, self.resolution,
                                      self.pars_threshold, self.remove_by_distance, self.brain_tissue_threshold,
                                      remove_smaller_than=self.remove_smaller_than,
                                      remove_smaller_z_length=self.remove_smaller_z_width, max_dist=self.max_dist,
@@ -1005,7 +1009,7 @@ class CountCellsProgressDialog(QDialog):
         #Worker Thread
         self.thread = QThread()
 
-        self.worker = CountCellsWorker(parent.input_folder_path, parent.output_folder_path, parent.resolution, parent.avg_cell_size)
+        self.worker = CountCellsWorker(parent.input_folder_path_pars, parent.output_folder_path, parent.resolution, parent.avg_cell_size)
 
         #print('Main thread ID: %s' % int(QThread.currentThreadId()))
         self.worker.moveToThread(self.thread)
@@ -1106,7 +1110,7 @@ class WatershedWidget(QWidget):
         self.setLayout(watershed_page_layout)
 
         # 1. Choose Input Directory-------------------------------------------------------------------------------------
-        self.in_out_widget = InputOutputWidget()
+        self.in_out_widget = InputOutputWidgetSingleInput()
         self.in_out_widget.input_dir_button.clicked.connect(self.chooseInputDir)
         self.in_out_widget.output_dir_button.clicked.connect(self.chooseOutputDir)
 
@@ -1145,26 +1149,18 @@ class WatershedWidget(QWidget):
         """
 
     def chooseInputDir(self):
-        home = os.path.expanduser("~")
-        directory = QFileDialog.getExistingDirectory(self, "Select Input Directory", home)
-        if directory != '':
-            self.input_folder_path = directory
-            self.in_out_widget.input_dir_line.setText(directory)
+        file_picker = FilePicker()
 
-            self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=False)
-            if len(self.input_file_list_c00) == 0:
-                self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
+        if file_picker.exec():
+            if file_picker.input_folder_path != '':
+                self.input_folder_path = file_picker.input_folder_path
+                self.in_out_widget.input_dir_line.setText(self.input_folder_path)
+                self.input_file_list_c01 = file_picker.input_file_paths
+                self.numFilesC01 = len(self.input_file_list_c01)
+                self.in_out_widget.numFiles_label.setText(f"Number of Images: {self.numFilesC01}")
+        file_picker.deleteLater()
 
-            self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=False, channel_one=True)
-            if len(self.input_file_list_c01) == 0:
-                self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
-
-            self.numFilesC00 = len(self.input_file_list_c00)
-            self.numFilesC01 = len(self.input_file_list_c01)
-            self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-            self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
-
-            self.checkEnableElements()
+        self.checkEnableElements()
 
     def chooseOutputDir(self):
         home = os.path.expanduser("~")
@@ -1184,13 +1180,10 @@ class WatershedWidget(QWidget):
     def set_input_dir_to_result_folder(self):
         self.input_folder_path = self.watershed_folder_out
         self.in_out_widget.input_dir_line.setText(self.watershed_folder_out)
-        self.input_file_list_c00 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=False)
-        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=True, channel_one=True)
+        self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path, isTif=None, channel_one=None)
 
-        self.numFilesC00 = len(self.input_file_list_c00)
         self.numFilesC01 = len(self.input_file_list_c01)
-        self.in_out_widget.numFilesC00_label.setText(f"Number of Images (Channel00): {self.numFilesC00}")
-        self.in_out_widget.numFilesC01_label.setText(f"Number of Images (Channel01): {self.numFilesC01}")
+        self.in_out_widget.numFiles_label.setText(f"Number of Images: {self.numFilesC01}")
 
     def set_resolution(self, resolution):
         self.resolution = resolution

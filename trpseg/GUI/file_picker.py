@@ -14,16 +14,13 @@ import os
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QDialog,
-    QFileDialog,
-    QSpinBox
+    QFileDialog
 )
 
 from trpseg.trpseg_util.utility import get_file_list_from_directory_filter
@@ -41,7 +38,7 @@ class FilePicker(QDialog):
 
         #Main Layout
         page_layout = QVBoxLayout()
-        page_layout.setContentsMargins(0,0,0,0)
+        #page_layout.setContentsMargins(0,0,0,0)
         self.setLayout(page_layout)
 
         #Filter Layout
@@ -57,6 +54,9 @@ class FilePicker(QDialog):
 
         self.filter_input_line.editingFinished.connect(self.set_filter)
 
+        self.filter_input_line.setToolTip("<p>You can specify a string that needs to be contained within the file names.</p>"
+                                           "<p>Example: C00, C01, _c4_</p>")
+
         #File Ending Layout
 
         file_ending_layout = QVBoxLayout()
@@ -70,6 +70,10 @@ class FilePicker(QDialog):
         file_ending_layout.addWidget(self.file_ending_input_line)
 
         self.file_ending_input_line.editingFinished.connect(self.set_file_ending_filter)
+
+        self.file_ending_input_line.setToolTip(
+            "<p>You can specify a the file extension you are interested in. It does not matter whether you use a . ('dot') or not.</p>"
+            "<p>Example: .tif , .png, tiff</p>")
 
         #Directory Layout
         dir_layout = QVBoxLayout()
@@ -95,9 +99,16 @@ class FilePicker(QDialog):
         okay_button = QPushButton("Okay")
         okay_button.clicked.connect(self.finish_file_picker)
 
+        page_layout.addLayout(filter_layout)
+        page_layout.addLayout(file_ending_layout)
+        page_layout.addLayout(dir_layout)
+        page_layout.addWidget(okay_button)
+
 
     def finish_file_picker(self):
 
+        self.input_file_paths = get_file_list_from_directory_filter(self.input_folder_path,
+                                                                    self.file_ending_filter_text, self.filter_text)
         if self.input_file_paths is not None:
             self.accept()
         else:
@@ -109,8 +120,6 @@ class FilePicker(QDialog):
         if directory != '':
             self.input_folder_path = directory
             self.input_dir_line.setText(directory)
-
-            self.input_file_paths = get_file_list_from_directory_filter(self.input_folder_path, self.file_ending_filter_text, self.filter_text)
 
 
     def set_filter(self):

@@ -21,14 +21,14 @@ from skimage.measure import label
 from trpseg.trpseg_util.utility import read_image, save_image, get_file_list_from_directory
 
 
-def segment_brain_region(input_folder_path, output_folder_path, sigma, threshold, isTif=True, channel_one=False, canceled=Event()):
+def segment_brain_region(input_file_paths, output_folder_path, sigma, threshold, canceled=Event()):
     """
     Segment the brain region in images. Simply a global thresholding on the smoothed images is used to get the segmentation result.
 
     Parameters
     ----------
-    input_folder_path: str, pathlib.Path
-        The path to the folder containing the image slices to be processed.
+    input_file_paths : List[str], List[pathlib.Path]
+        The paths to the files containing the 3D image stack slices.
     output_folder_path: str, pathlib.Path
         The path to the folder where the output images are stored
     sigma : int, float
@@ -36,16 +36,6 @@ def segment_brain_region(input_folder_path, output_folder_path, sigma, threshold
     threshold : int, float
         The global threshold for brain tissue detection. Pixels in the smoothed image with a value greater than threshold
         are set to 255, others to 0
-    isTif : bool, optional
-        Determines, which input images inside input_folder_path are considered.
-        True, means that images have file type .tif
-        False, means that images have file type .png
-        None, means that all file types are considered
-    channel_one : bool, optional
-        Determines, which channel from the input images to use.
-        True, means that only images containing the string "_C01_" are considered.
-        False, means that only images containing the string "_C00_" are considered.
-        None, means that all channels are considered.
     canceled : threading.Event, optional
         An event object that allows to cancel the process
 
@@ -60,7 +50,7 @@ def segment_brain_region(input_folder_path, output_folder_path, sigma, threshold
        Every 0 pixel that is not connected to the 0 region to which the upper left pixel belongs gets assigned value 1
     """
 
-    input_files_list = get_file_list_from_directory(input_folder_path, isTif=isTif, channel_one=channel_one)
+    input_files_list = input_file_paths
 
     output_folder = Path(output_folder_path)
     os.makedirs(output_folder, exist_ok=True)

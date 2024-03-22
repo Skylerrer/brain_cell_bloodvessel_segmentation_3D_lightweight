@@ -146,14 +146,14 @@ class InputOutputWidgetTwoInputs(QWidget):
         # Display numFiles
         display_filenum = QHBoxLayout()
         display_filenum.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.numFilesC00_label = QLabel("Number of Images (Blood):")
+        self.numFilesBlood_label = QLabel("Number of Images (Blood):")
         # self.numFilesC00_label.setMinimumSize(250,1)
-        self.numFilesC01_label = QLabel("Number of Images (Pars):")
+        self.numFilesPars_label = QLabel("Number of Images (Pars):")
         # self.numFilesC01_label.setMinimumSize(250, 1)
         # self.numFilesC00_label.setStyleSheet(stylesheets.help)
         # self.numFilesC01_label.setStyleSheet(stylesheets.help)
-        display_filenum.addWidget(self.numFilesC00_label)
-        display_filenum.addWidget(self.numFilesC01_label)
+        display_filenum.addWidget(self.numFilesBlood_label)
+        display_filenum.addWidget(self.numFilesPars_label)
         # display_filenum.addStretch(0)
 
         input_layout.addLayout(dir_layout1)

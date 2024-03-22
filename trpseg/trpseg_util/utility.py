@@ -1784,7 +1784,7 @@ def remove_small_objects_3D_wholeStack(input_folder_path, output_folder_path, re
 
 
 def remove_small_objects_3D_memeff(input_folder_path, output_folder_path, min_num_voxels, z_remove_width, max_images_in_memory=100,
-                                   store_label_imgs=False, label_imgs_dtype=np.uint32, isTif=False, channel_one=None, canceled=Event(),
+                                   store_label_imgs=False, label_imgs_dtype=np.uint32, isTif=None, channel_one=None, canceled=Event(),
                                    progress_status=None, maxProgress=90):
     """Remove small objects from a binary image stack given in slices.
     A maximal number of images that will be loaded into memory and processed at once can be specified.
@@ -2095,7 +2095,7 @@ def label_3D_memeff(input_folder_path, output_folder_path, max_images_in_memory=
     return new_num_labels, max_label
 
 
-def count_segmentation_pixels(input_folder_path, isTif=False, channel_one=True, canceled=Event(), progress_status=None, maxProgress=90):
+def count_segmentation_pixels(input_folder_path, isTif=None, channel_one=None, canceled=Event(), progress_status=None, maxProgress=90):
     """ Count the total number of non-zero pixels in a 3D image stack given in slices.
 
     Parameters

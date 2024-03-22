@@ -41,7 +41,7 @@ from trpseg.trpseg_util.utility import read_image, save_image, store_substack_ex
 
 
 #Skeletonization
-def skeletonize3D(input_folder_path, output_folder_path, resolution, max_images_in_memory=200, isTif=False, channel_one=None, canceled=Event()):
+def skeletonize3D(input_folder_path, output_folder_path, resolution, max_images_in_memory=200, isTif=None, channel_one=None, canceled=Event()):
     """Perform 3D skeletonization on a binary image stack.
 
     This algorithm performs skeletonization in blocks of max_images_in_memory

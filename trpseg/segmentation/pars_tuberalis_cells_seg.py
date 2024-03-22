@@ -61,15 +61,14 @@ from trpseg.trpseg_util.brain_region_segmentation import segment_brain_region
 from trpseg.trpseg_util.chamfer_dt import ch_distance_transform_files_memeff
 
 
-
 #max_dist is physical distance
-def new_pars_seg_opti(input_folder_path, distance_folder_path, output_folder_path, median_radius, threshold, remove_by_distance, max_dist, isTif=True, channel_one=True, canceled=Event()):
+def new_pars_seg_opti(input_file_paths, distance_folder_path, output_folder_path, median_radius, threshold, remove_by_distance, max_dist, isTif=True, channel_one=True, canceled=Event()):
     """Perform pars tuberalis cells segmentation.
 
     Parameters
     ----------
-    input_folder_path : str, pathlib.Path
-        The path to the folder containing the image slices of the 3D image stack form which pars tuberalis cells should be segmented.
+    input_file_paths : List[str], List[pathlib.Path]
+        The path to the files containing the image slices of the 3D image stack form which pars tuberalis cells should be segmented.
     distance_folder_path : str, pathlib.Path
         The path to the folder containing the image transformation for the stack.
         It should specify for every voxel the physical distance to the brain boundary.
@@ -106,18 +105,18 @@ def new_pars_seg_opti(input_folder_path, distance_folder_path, output_folder_pat
     3. Remove objects too far away from outer brain boundary (Tanycytes signal + Noise) -> uses distance transformation
     """
 
-    input_files_list = get_file_list_from_directory(input_folder_path, isTif=isTif, channel_one=channel_one)
+    input_files_list = input_file_paths
 
     numFiles = len(input_files_list)
 
     if numFiles == 0:
-        raise RuntimeError(f"No files named *_C01_*.tif found in {input_folder_path}")
+        raise RuntimeError(f"No Pars Tuberalis Cell Images found!")
 
     if remove_by_distance and max_dist == None:
         raise RuntimeError("You have to specify a max_dist if you set remove_by_distance to True")
 
     if remove_by_distance:
-        distance_input_files_list = get_file_list_from_directory(distance_folder_path, isTif=False, channel_one=None)
+        distance_input_files_list = get_file_list_from_directory(distance_folder_path, isTif=None, channel_one=None)
 
         numDistanceFiles = len(distance_input_files_list)
 
@@ -325,7 +324,7 @@ def get_closing_radius_from_resolution(resolution):
     return int(np.floor(1.626/xy_res))
 
 
-def segment_pars_tuberalis_cells(input_folder_path, output_folder_path, resolution, threshold, remove_by_distance,
+def segment_pars_tuberalis_cells(input_file_paths_pars, input_file_paths_blood, output_folder_path, resolution, threshold, remove_by_distance,
                                  brain_region_threshold=None, remove_smaller_than=None, remove_smaller_z_length=None,
                                  max_dist=None, brain_region_sigma=None,
                                  brain_channel_one=False, median_radius=None, closing_radius=None,
@@ -338,9 +337,11 @@ def segment_pars_tuberalis_cells(input_folder_path, output_folder_path, resoluti
 
     Parameters
     ----------
-    input_folder_path : str, pathlib.Path
-        The path to the folder containing the 3D image stack slices. The slices are assumed to be tif files from two channels.
-        Images from channel 0 have "_C00_" in their name and images from channel 1 have "_C01_" in their name.
+    input_file_paths_pars : List[str], List[pathlib.Path]
+        The paths to the files containing the 3D image stack slices of the pars tuberalis channel.
+    input_file_paths_blood : List[str], List[pathlib.Path]
+        The paths to the files containing the 3D image stack slices of the blood channel.
+        Can be an empty list if no brain region thresholding is done with the blood channel.
     output_folder_path : str, pathlib.Path
         The path to the folder where the results are stored. Subfolders will be created in this folder.
     resolution : (3,) array, 3-tuple
@@ -398,8 +399,7 @@ def segment_pars_tuberalis_cells(input_folder_path, output_folder_path, resoluti
 
     #Initialize Parameters
     if max_images_in_memory is None:
-        file_paths_help = get_file_list_from_directory(input_folder_path, isTif=True)
-        shape_help = get_img_shape_from_filepath(file_paths_help[0])
+        shape_help = get_img_shape_from_filepath(input_file_paths_pars[0])
         max_images_in_memory = get_max_images_in_memory_from_img_shape(shape_help)
 
     if prepend_to_folder_name is None:
@@ -454,7 +454,12 @@ def segment_pars_tuberalis_cells(input_folder_path, output_folder_path, resoluti
 
         out_folder_name5 = prepend_to_folder_name + "PSEG_distance_transform"
         distance_folder_path = output_folder / out_folder_name5
-        segment_brain_region(input_folder_path, output_folder_outer_tmp, brain_region_sigma, brain_region_threshold, channel_one=brain_channel_one, canceled=canceled)
+
+        if brain_channel_one:
+            segment_brain_region(input_file_paths_pars, output_folder_outer_tmp, brain_region_sigma, brain_region_threshold, canceled=canceled)
+        else:
+            segment_brain_region(input_file_paths_blood, output_folder_outer_tmp, brain_region_sigma, brain_region_threshold, canceled=canceled)
+
 
         if canceled.is_set():
             return
@@ -486,7 +491,7 @@ def segment_pars_tuberalis_cells(input_folder_path, output_folder_path, resoluti
         progress_status.emit(["Segmenting pars tuberalis cells...", progress])
 
     start = timer()
-    new_pars_seg_opti(input_folder_path, distance_folder_path, output_folder_path_tmp, median_radius, threshold, remove_by_distance, max_dist, canceled=canceled)
+    new_pars_seg_opti(input_file_paths_pars, distance_folder_path, output_folder_path_tmp, median_radius, threshold, remove_by_distance, max_dist, canceled=canceled)
     end = timer()
     print(f"Pars Tuberalis Cell segmentation took {end - start} seconds.")
 
@@ -550,7 +555,7 @@ def postprocess_pars_seg(input_folder_path, output_folder_path, resolution, clos
 
 
 def watershed_split_memeff(input_folder_path, output_folder_path, resolution, max_images_in_memory=None,
-                           out_dtype=np.uint16, isTif=False, channel_one=True, canceled=Event(), progress_status=None):
+                           out_dtype=np.uint16, isTif=None, channel_one=None, canceled=Event(), progress_status=None):
     """Perform memory efficient watershed transformation to generate a labeled image stack in which touching pars tuberalis cells are splitted.
 
     This method can be used to count the approximate number of pars tuberalis cells. Assuming cells have a roundish shape.
@@ -940,7 +945,7 @@ def get_footprint_for_peak_local_max(resolution):
     return footprint
 
 
-def estimateParsCellCounts(input_folder_path, resolution, average_cell_size, isTif=None, channel_one=True, canceled=Event(), progress_status=None, maxProgress=90): #average_cell_size e.g. 550
+def estimateParsCellCounts(input_folder_path, resolution, average_cell_size, isTif=None, channel_one=None, canceled=Event(), progress_status=None, maxProgress=90): #average_cell_size e.g. 550
     """Estimate the pars tuberalis cells number by dividing the total cell volume of a given pars tuberalis cell segmention by the average cell size.
 
     Parameters

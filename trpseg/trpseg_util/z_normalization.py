@@ -19,14 +19,14 @@ import numpy as np
 from trpseg.trpseg_util.utility import read_image, save_image, get_file_list_from_directory
 
 
-def z_stack_tissue_mean_normalization(input_folder_path, output_folder_path, min_tissue, max_tissue, tissue_mean=None,
-                                      isTif=True, channel_one=False, canceled=Event(), progress_status=None):
+def z_stack_tissue_mean_normalization(input_folder_path_list, output_folder_path, min_tissue, max_tissue, tissue_mean=None,
+                                      canceled=Event(), progress_status=None):
     """Normalize the brain tissue mean of all images in input_folder to the provided or automatically determined wanted tissue mean.
 
     Parameters
     ----------
-    input_folder_path: str, pathlib.Path
-        The path to the folder containing the image slices to be normalized.
+    input_folder_path_list: List[str], List[pathlib.Path]
+        List of file paths to the image slices to be normalized.
     output_folder_path: str, pathlib.Path
         The path to the folder where the normalized output images are stored
     min_tissue : int
@@ -40,16 +40,6 @@ def z_stack_tissue_mean_normalization(input_folder_path, output_folder_path, min
     tissue_mean : int, float, optional
         The wanted tissue mean to which all images are normalized.
         If None, then the average tissue mean over the z_stack is automatically approximated.
-    isTif : bool, optional
-        Determines, which input images inside input_folder_path are considered.
-        True, means that images have file type .tif
-        False, means that images have file type .png
-        None, means that all file types are considered
-    channel_one : bool, optional
-        Determines, which channel from the input images to use.
-        True, means that only images containing the string "_C01_" are considered.
-        False, means that only images containing the string "_C00_" are considered.
-        None, means that all channels are considered.
     canceled : threading.Event, optional
         An event object that allows to cancel the process
     progress_status : PyQt6.QtCore.pyqtSignal
@@ -70,9 +60,7 @@ def z_stack_tissue_mean_normalization(input_folder_path, output_folder_path, min
 
     progress = 0
 
-    input_folder_path = Path(input_folder_path)
-
-    input_files_list = get_file_list_from_directory(input_folder_path, isTif=isTif, channel_one=channel_one)
+    input_files_list = input_folder_path_list
 
     numFiles = len(input_files_list)
 

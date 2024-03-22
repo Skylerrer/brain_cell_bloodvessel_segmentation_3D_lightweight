@@ -734,15 +734,15 @@ def get_default_NN_model_path():
     return os.path.join(DATA_DIRECTORY, "NN_models", "vesselNN_20230831_172111_epoch063_cplex")
 
 
-def networkPredictFolder(input_folder_path, output_folder_path, trained_model_path=None, model_architecture="unet2D_large", isTif=True, channel_one=False, canceled=Event(), progress_status=None, max_progress=50):
+def networkPredictFolder(input_file_paths, output_folder_path, trained_model_path=None, model_architecture="unet2D_large", canceled=Event(), progress_status=None, max_progress=50):
     """
     Perform neural network prediction on all the images in input_folder_path to create segmentation of blood vessels.
     If no path to a trained model is given then a default already trained 2D U-Net is used.
 
     Parameters
     ----------
-    input_folder_path : str, pathlib.Path
-        The path to the folder containing the image slices of the 3D binary image stack on which prediction should be performed.
+    input_file_paths : List[str], List[pathlib.Path]
+        The paths to the files containing the image slices of the 3D image stack on which prediction should be performed.
     output_folder_path : str, pathlib.Path
         The path to the folder where the results are stored.
     trained_model_path : str, pathlib.Path
@@ -751,16 +751,6 @@ def networkPredictFolder(input_folder_path, output_folder_path, trained_model_pa
         You can choose between unet2D_small and unet2D_large.
         unet2D_small uses the model architecture from create_unet_opti_small
         unet2D_large uses the model architecture from create_unet_opti_large
-    isTif : bool, optional
-        Determines, which input images inside input_folder_path are considered.
-        True, means that images have file type .tif
-        False, means that images have file type .png
-        None, means that all file types are considered
-    channel_one : bool, optional
-        Determines, which channel from the input images to use.
-        True, means that only images containing the string "_C01_" are considered.
-        False, means that only images containing the string "_C00_" are considered.
-        None, means that all channels are considered.
     canceled : threading.Event, optional
         An event object that allows to cancel the process
     progress_status : PyQt6.QtCore.pyqtSignal
@@ -772,7 +762,7 @@ def networkPredictFolder(input_folder_path, output_folder_path, trained_model_pa
     output_folder = Path(output_folder_path)
     os.makedirs(output_folder, exist_ok=True)
 
-    image_paths = get_file_list_from_directory(input_folder_path, isTif=isTif, channel_one=channel_one)
+    image_paths = input_file_paths
 
     img_height, img_width = get_img_shape_from_filepath(image_paths[0])
 
@@ -1042,15 +1032,15 @@ def postProcessDLRes(input_folder_path, output_folder_path, resolution, removeSm
     shutil.rmtree(output_folder_tmp)
 
 
-def network_predict_and_postprocess(input_folder_path, output_folder_path, model_path, resolution, remove_small_objects,
+def network_predict_and_postprocess(input_file_paths, output_folder_path, model_path, resolution, remove_small_objects,
                                     fill_holes, do_opening, max_images_in_memory=None, canceled=Event(),
                                     progress_status=None):
     """Wrapper method to perform neural network prediction and followed up postprocessing on images in input_folder_path
 
     Parameters
     ----------
-    input_folder_path : str, pathlib.Path
-        The path to the folder containing the image slices of the 3D image stack on which prediction and post-processing should be performed.
+    input_file_paths : List[str], List[pathlib.Path]
+        The path to the files containing the image slices of the 3D image stack on which prediction and post-processing should be performed.
     output_folder_path : str, pathlib.Path
         The path to the folder where the results are stored.
     model_path : str, pathlib.Path
@@ -1090,13 +1080,12 @@ def network_predict_and_postprocess(input_folder_path, output_folder_path, model
     os.makedirs(network_output_folder, exist_ok=True)
 
     if max_images_in_memory is None:
-        file_paths_help = get_file_list_from_directory(input_folder_path, isTif=True)
-        shape_help = get_img_shape_from_filepath(file_paths_help[0])
+        shape_help = get_img_shape_from_filepath(input_file_paths[0])
         max_images_in_memory = get_max_images_in_memory_from_img_shape(shape_help)
 
     start = timer()
 
-    networkPredictFolder(input_folder_path, network_output_folder, model_path, canceled=canceled, progress_status=progress_status)
+    networkPredictFolder(input_file_paths, network_output_folder, model_path, canceled=canceled, progress_status=progress_status)
 
     end = timer()
     print(f"UNet prediction took {end-start} seconds.")

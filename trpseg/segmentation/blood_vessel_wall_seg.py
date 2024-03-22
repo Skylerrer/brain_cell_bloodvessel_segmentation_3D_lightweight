@@ -214,7 +214,7 @@ def get_default_minimal_z_length(resolution):
     return int(10.0/z_res)
 
 
-def blood_vessel_wall_segmentation(input_folder_path, output_folder_path, resolution, min_signal_intensity=None,
+def blood_vessel_wall_segmentation(input_file_paths, output_folder_path, resolution, min_signal_intensity=None,
                                    high_confidence_threshold=None, local_th_offset=None, rball_th=None,
                                    store_intermed_results=True, remove_border=True, border_rf_model_path=None,
                                    remove_small_objects=True, minimal_object_size=None, minimal_object_z_length=None,
@@ -225,8 +225,8 @@ def blood_vessel_wall_segmentation(input_folder_path, output_folder_path, resolu
 
     Parameters
     ----------
-    input_folder_path : str, pathlib.Path
-        The path to the folder containing the image slices of the 3D binary image stack from which blood vessels should be segmented
+    input_file_paths : List[str], List[pathlib.Path]
+        The path to the files containing the image slices of the 3D image stack from which blood vessels should be segmented
     output_folder_path : str, pathlib.Path
         The path to the folder where the results are stored.
     resolution : (3,) array, 3-tuple
@@ -286,7 +286,7 @@ def blood_vessel_wall_segmentation(input_folder_path, output_folder_path, resolu
     6. remove too small objects from the segmentation
     """
 
-    input_files_list = get_file_list_from_directory(input_folder_path, isTif=isTif, channel_one=channel_one)
+    input_files_list = input_file_paths
 
 
     numFiles = len(input_files_list)
