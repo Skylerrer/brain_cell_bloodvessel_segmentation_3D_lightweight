@@ -367,6 +367,12 @@ def get_file_list_from_directory_filter(directory, file_ending=None, channel_fil
 
     input_folder = Path(directory)
 
+    if file_ending == "":
+        file_ending = None
+
+    if channel_filter == "":
+        channel_filter = None
+
     #make sure file_ending starts with a dot
     if file_ending is not None and len(file_ending) > 0:
         if file_ending[0] != ".":
