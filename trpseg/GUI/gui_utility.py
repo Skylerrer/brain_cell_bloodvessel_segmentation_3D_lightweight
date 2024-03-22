@@ -21,8 +21,10 @@ from PyQt6.QtWidgets import (
     QSpinBox
 )
 
+from trpseg.GUI.file_picker import FilePicker
 
-class InputOutputWidget(QWidget):
+
+class InputOutputWidgetSingleInput(QWidget):
 
     def __init__(self):
         super().__init__()
@@ -56,14 +58,10 @@ class InputOutputWidget(QWidget):
         # Display numFiles
         display_filenum = QHBoxLayout()
         display_filenum.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.numFilesC00_label = QLabel("Number of Images (Channel00):")
-        # self.numFilesC00_label.setMinimumSize(250,1)
-        self.numFilesC01_label = QLabel("Number of Images (Channel01):")
-        # self.numFilesC01_label.setMinimumSize(250, 1)
-        # self.numFilesC00_label.setStyleSheet(stylesheets.help)
-        # self.numFilesC01_label.setStyleSheet(stylesheets.help)
-        display_filenum.addWidget(self.numFilesC00_label)
-        display_filenum.addWidget(self.numFilesC01_label)
+        self.numFiles_label = QLabel("Number of Images:")
+        # self.numFiles_label.setMinimumSize(250,1)
+        # self.numFiles_label.setStyleSheet(stylesheets.help)
+        display_filenum.addWidget(self.numFiles_label)
         # display_filenum.addStretch(0)
 
         input_layout.addLayout(dir_layout)
@@ -94,6 +92,98 @@ class InputOutputWidget(QWidget):
 
         in_out_layout.addLayout(output_layout, Qt.AlignmentFlag.AlignTop)
 
+
+class InputOutputWidgetTwoInputs(QWidget):
+
+    def __init__(self):
+        super().__init__()
+
+        in_out_layout = QVBoxLayout()
+        in_out_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.setLayout(in_out_layout)
+
+        # 1. Choose Input Directory--------------------------------------------------------------------------------------
+        input_layout = QVBoxLayout()
+        input_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        input_layout.setContentsMargins(0, 0, 0, 0)
+
+        #Input for blood files
+        dir_layout1 = QHBoxLayout()
+
+        input_dir_label_blood = QLabel("Choose Input Directory (Blood):")
+
+        self.input_dir_line_blood = QLineEdit()
+        self.input_dir_line_blood.setEnabled(False)
+        # input_dir_line.setMinimumSize(300,10)
+
+        self.input_dir_button_blood = QPushButton("Select Directory ...")
+        self.input_dir_button_blood.setToolTip("<p>Select the folder in which the blood image stack slices that "
+                                         "you want to process are stored.</p>")
+
+        dir_layout1.addWidget(input_dir_label_blood)
+        dir_layout1.addWidget(self.input_dir_line_blood)
+        dir_layout1.addWidget(self.input_dir_button_blood)
+
+        # Input for Pars files
+        dir_layout2 = QHBoxLayout()
+
+        input_dir_label_pars = QLabel("Choose Input Directory (Pars):")
+
+        self.input_dir_line_pars = QLineEdit()
+        self.input_dir_line_pars.setEnabled(False)
+        # input_dir_line.setMinimumSize(300,10)
+
+        self.input_dir_button_pars = QPushButton("Select Directory ...")
+        self.input_dir_button_pars.setToolTip("<p>Select the folder in which the pars image stack slices that "
+                                               "you want to process are stored.</p>")
+
+        dir_layout2.addWidget(input_dir_label_pars)
+        dir_layout2.addWidget(self.input_dir_line_pars)
+        dir_layout2.addWidget(self.input_dir_button_pars)
+
+
+        # Display numFiles
+        display_filenum = QHBoxLayout()
+        display_filenum.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.numFilesC00_label = QLabel("Number of Images (Blood):")
+        # self.numFilesC00_label.setMinimumSize(250,1)
+        self.numFilesC01_label = QLabel("Number of Images (Pars):")
+        # self.numFilesC01_label.setMinimumSize(250, 1)
+        # self.numFilesC00_label.setStyleSheet(stylesheets.help)
+        # self.numFilesC01_label.setStyleSheet(stylesheets.help)
+        display_filenum.addWidget(self.numFilesC00_label)
+        display_filenum.addWidget(self.numFilesC01_label)
+        # display_filenum.addStretch(0)
+
+        input_layout.addLayout(dir_layout1)
+        input_layout.addLayout(dir_layout2)
+        input_layout.addLayout(display_filenum)
+        # input_layout.addStretch(0)
+
+        in_out_layout.addLayout(input_layout, Qt.AlignmentFlag.AlignTop)
+
+        # 2.Choose Output Directory--------------------------------------------------------------------------------------
+        output_layout = QHBoxLayout()
+        output_layout.setContentsMargins(0, 0, 0, 0)
+        output_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        output_dir_label = QLabel("Choose Output Directory:")
+        # output_dir_label.setStyleSheet(stylesheets.help)
+        self.output_dir_line = QLineEdit()
+        self.output_dir_line.setEnabled(False)
+        # output_dir_line.setMinimumSize(300,10)
+
+        # self.output_dir_line.setStyleSheet(stylesheets.help)
+        self.output_dir_button = QPushButton("Select Directory ...")
+        self.output_dir_button.setToolTip("<p>Select the folder where the results should be "
+                                          "stored.</p>")
+        # output_dir_button.setStyleSheet(stylesheets.help)
+        output_layout.addWidget(output_dir_label)
+        output_layout.addWidget(self.output_dir_line)
+        output_layout.addWidget(self.output_dir_button)
+
+        in_out_layout.addLayout(output_layout, Qt.AlignmentFlag.AlignTop)
 
 class NormalizationWidget(QWidget):
     def __init__(self, parent_widget: QWidget):
