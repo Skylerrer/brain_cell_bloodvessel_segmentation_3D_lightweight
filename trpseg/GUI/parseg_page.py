@@ -469,9 +469,15 @@ class ParsSegPage(QWidget):
                 show_error_message(self, "You need to specify a max distance and the brain tissue threshold!")
                 return
 
+            if not self.brain_tissue_channel_one and self.numFilesC00 < 1:
+                show_error_message(self,
+                                   "You need to select blood vessel wall labeled input  if you use remove by distance!")
+                return
+
         if self.pars_threshold == 0:
             show_error_message(self, "You need to specify a threshold value for pars tuberalis cells segmentation!")
             return
+
 
         #Determine how folders will be named
         self.pseg_prepend_str = time.strftime("%H%M%S_")
@@ -518,7 +524,7 @@ class ParsSegPage(QWidget):
         self.input_file_list_c01 = get_file_list_from_directory(self.input_folder_path_pars, isTif=None, channel_one=None)
 
         self.numFilesC01 = len(self.input_file_list_c01)
-        self.in_out_widget.numFilesBlood_label.setText(f"Number of Images (Pars): {self.numFilesC01}")
+        self.in_out_widget.numFilesPars_label.setText(f"Number of Images (Pars): {self.numFilesC01}")
 
     def initialize_advanced_parameters(self):
         self.brain_tissue_sigma = get_default_brain_tissue_sigma()
@@ -642,6 +648,10 @@ class ParsSegPage(QWidget):
         th_dlg.deleteLater()
 
     def use_brain_th_picker(self):
+        if not self.brain_tissue_channel_one and self.numFilesC00 < 1:
+            show_error_message(self, "You need to select blood vessel wall labeled input images!")
+            return
+
         th_dlg = ThresholdPickerGaussianSmoothed(self.brain_tissue_sigma)
         if self.brain_tissue_channel_one:
             th_dlg.set_image_paths(self.input_file_list_c01)
@@ -657,7 +667,7 @@ class ParsSegPage(QWidget):
     def set_pars_th(self, value):
         self.pars_threshold = value
 
-        if self.numFilesC00 > 0 and self.numFilesC01 > 0 and self.output_folder_path != "":
+        if self.numFilesC01 > 0 and self.output_folder_path != "":
             self.pars_seg_start_button.setEnabled(True)
 
     def set_brain_th(self, value):
@@ -728,7 +738,7 @@ class ParsSegPage(QWidget):
             self.checkEnableElements()
 
     def checkEnableElements(self):
-        if self.numFilesC00 > 0 and self.numFilesC01 > 0 and self.output_folder_path != "":
+        if self.numFilesC01 > 0 and self.output_folder_path != "":
             self.remove_by_distance_chbox.setEnabled(True)
             self.pars_th_spin.setEnabled(True)
             self.pars_th_button.setEnabled(True)
