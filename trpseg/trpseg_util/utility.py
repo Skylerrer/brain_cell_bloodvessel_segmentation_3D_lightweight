@@ -1274,7 +1274,7 @@ def dilation3D(input_folder_path, output_folder_path, footprint, radius, max_ima
                                         dtype=np.uint8, file_extension=".png")
 
 
-def opening3D(input_folder_path, output_folder_path, footprint, radius, max_images_in_memory=250, isTif=False, channel_one=None, canceled=Event()):
+def opening3D(input_folder_path, output_folder_path, footprint, radius, max_images_in_memory=250, isTif=None, channel_one=None, canceled=Event()):
     """Perform 3D binary morphological opening.
     A maximal number of images that will be loaded into memory and processed at once can be specified.
 
@@ -1338,7 +1338,7 @@ def opening3D(input_folder_path, output_folder_path, footprint, radius, max_imag
                                         dtype=np.uint8, file_extension=".png")
 
 
-def closing3D(input_folder_path, output_folder_path, footprint, radius, max_images_in_memory=250, isTif=False, channel_one=None, canceled=Event()):
+def closing3D(input_folder_path, output_folder_path, footprint, radius, max_images_in_memory=250, isTif=None, channel_one=None, canceled=Event()):
     """Perform 3D binary morphological closing.
     A maximal number of images that will be loaded into memory and processed at once can be specified.
 
@@ -1601,7 +1601,7 @@ def count_objects_3D_whole(input_folder_path, isTif=False, channel_one=None):
 
 
 def count_objects_3D_memeff(input_folder_path, output_folder_path=None, max_images_in_memory=None, connectivity=1,
-                            label_imgs_dtype=np.uint32, isTif=False, channel_one=None, canceled=Event(),
+                            label_imgs_dtype=np.uint32, isTif=None, channel_one=None, canceled=Event(),
                             progress_status=None, maxProgress=90):
     """ Count the number of objects in the given image stack.
     A maximal number of images that will be loaded into memory and processed at once can be specified.
@@ -1902,7 +1902,7 @@ def remove_small_objects_3D_memeff(input_folder_path, output_folder_path, min_nu
 
 
 def label_3D_memeff(input_folder_path, output_folder_path, max_images_in_memory=100, connectivity=1, out_dtype=np.uint32,
-                    return_region_sizes=False, isTif=False, channel_one=None, canceled=Event(), progress_status=None, maxProgress=90):
+                    return_region_sizes=False, isTif=None, channel_one=None, canceled=Event(), progress_status=None, maxProgress=90):
     """
 
     Parameters

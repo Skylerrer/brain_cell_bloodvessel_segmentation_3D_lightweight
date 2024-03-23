@@ -62,7 +62,7 @@ from trpseg.trpseg_util.chamfer_dt import ch_distance_transform_files_memeff
 
 
 #max_dist is physical distance
-def new_pars_seg_opti(input_file_paths, distance_folder_path, output_folder_path, median_radius, threshold, remove_by_distance, max_dist, isTif=True, channel_one=True, canceled=Event()):
+def new_pars_seg_opti(input_file_paths, distance_folder_path, output_folder_path, median_radius, threshold, remove_by_distance, max_dist, isTif=None, channel_one=None, canceled=Event()):
     """Perform pars tuberalis cells segmentation.
 
     Parameters

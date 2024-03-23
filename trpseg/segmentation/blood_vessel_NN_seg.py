@@ -952,7 +952,7 @@ def postProcessDLRes(input_folder_path, output_folder_path, resolution, removeSm
 
         print("Fill holes")
         #fill_holes
-        input_files_list = get_file_list_from_directory(current_input_folder_path, isTif=False, channel_one=False)
+        input_files_list = get_file_list_from_directory(current_input_folder_path, isTif=None, channel_one=None)
 
         num_images = len(input_files_list)
 
@@ -1022,7 +1022,7 @@ def postProcessDLRes(input_folder_path, output_folder_path, resolution, removeSm
 
     if current_input_folder_path != output_folder_path:
 
-        input_files_list = get_file_list_from_directory(current_input_folder_path, isTif=False)
+        input_files_list = get_file_list_from_directory(current_input_folder_path, isTif=None, channel_one=None)
 
         for i in range(len(input_files_list)):
 
